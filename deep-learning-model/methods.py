@@ -2,6 +2,7 @@
 To generate 3-channel PPI data
 '''
 import numpy as np
+import random
 
 
 def get_CNN_data_3_channel(protein_A_seq,protein_B_seq):
@@ -271,9 +272,77 @@ def __main_plus():
         if (len(s1)<1800) and ((len(s2)<1800)):
             all_data.append(get_CNN_data_3_channel(s1,s2))
 
-    np.save("load data.npy",all_data)
+    np.save("plus data.npy",all_data)
+def __main_minus():
+    map_list = np.load("interaction pair.npy")
+    sequence = np.load("sequence.npy")
+    PPI_list = np.load("interaction pair.npy")
+    tissue_list = np.load("tissue_list.npy")
+    subcellular_location_list = np.load("subcellular_location_list.npy")
+    def generate_random_data(PPI_list):
+        inside = True
+        while(inside is True):
+            e1 = random.randint(0, 16252)
+            e2 = random.randint(0, 16252)
+            if [e1,e2] not in PPI_list:
+                inside = False
+                return [e1,e2]
+    def generate_location_data(tissue_list,subcellular_location_list):
+        def match(list_1,list_2):
+            inside = False
+            for _ in list_1:
+                if _ in list_2:
+                    inside = True
+            if inside == False:
+                return 1
+            else:
+                return -1
+        inside = True
+        while (inside is True):
+            e1 = random.randint(0, 16252)
+            e2 = random.randint(0, 16252)
+            if (match(tissue_list[e1],tissue_list[e2]) == 1) and (match(subcellular_location_list[e1],subcellular_location_list[e2]) == 1):
+                return [e1,e2]
+    def generate_edited_data(PPI_list):
+        def fix_seuqence(seq):
+            def fix(amino_acid):
+                dic = ['A','C','D','E','F','G','H','I','K','L','M','N','Q','S','T','P','R','V','W','Y']
+                random.shuffle(dic)
+                if amino_acid != dic[0]:
+                    return dic[0]
+                else:
+                    return dic[1]
+            per = random.randint(20,80)
+            for _ in range(int(len(seq)*per/100)):
+                rs = random.randint(0,len(seq)-1)
+                seq[_] = fix(seq[_])
+            return seq
 
-__main_plus()
+        rank = random.randint(0,len(PPI_list)-1)
+        s1 = sequence[map_list[rank][0]]
+        s2 = sequence[map_list[rank][1]]
+        return fix_seuqence(s1),fix_seuqence(s2)
+
+
+    num_random = 120639     # random data
+    num_location = 70000      # location data
+    num_edited = 70000      # edited data
+
+    all_data = []
+    for rRand in range(num_random):
+        r1,r2 = generate_random_data(PPI_list)
+        all_data.append(get_CNN_data_3_channel(sequence[r1],sequence[r2]))
+
+    for lRand in range(num_location):
+        l1,l2 = generate_location_data(tissue_list,subcellular_location_list)
+        all_data.append(get_CNN_data_3_channel(sequence[l1],sequence[l2]))
+
+    for eRand in range(num_edited):
+        e1,e2 = generate_edited_data(PPI_list)
+        all_data.append(get_CNN_data_3_channel(e1,e2))
+
+    np.save("minus data.npy",all_data)
+
 
 
 
